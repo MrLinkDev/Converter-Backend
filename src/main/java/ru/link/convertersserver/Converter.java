@@ -21,8 +21,27 @@ public class Converter {
     private PrintWriter printWriter;
     private BufferedReader bufferedReader;
 
+    private final Timer timer;
+    private final TimerTask timeoutTask;
+
+    private final long delay = 2000L;
+
     public Converter(int converterId) {
         this.converterId = converterId;
+
+        this.timer = new Timer("Reading timeout");
+        this.timeoutTask = new TimerTask() {
+            @Override
+            public void run() {
+                log("Reading timeout");
+
+                try {
+                    socket.close();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        };
     }
 
     /*
@@ -163,26 +182,12 @@ public class Converter {
      *         возвращает "".
      */
     private String read() {
-        Timer timer = new Timer("Reading timeout");
-        TimerTask timeoutTask = new TimerTask() {
-            @Override
-            public void run() {
-                log("Reading timeout");
-
-                try {
-                    socket.close();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        };
-        long delay = 2000L;
-        
         String answer = "";
 
         try {
             timer.schedule(timeoutTask, delay);
             answer = bufferedReader.readLine();
+            timer.cancel();
         } catch (IOException e) {
             return "";
         }
